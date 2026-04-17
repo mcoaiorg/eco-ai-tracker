@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eco AI Earth Tracker 🌍🤖</title>
+<title>Eco AI Tracker 🌍🤖</title>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -26,13 +26,11 @@ body {
   z-index: 999;
 }
 
-input {
+input, input[type="file"] {
   padding: 10px;
+  margin: 10px;
   border-radius: 8px;
   border: 1px solid #ccc;
-  margin: 10px;
-  width: 80%;
-  max-width: 250px;
 }
 
 .container {
@@ -50,10 +48,7 @@ input {
   max-width: 320px;
   border-radius: 15px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  transition: 0.3s;
 }
-
-.card:hover { transform: scale(1.03); }
 
 button {
   padding: 10px;
@@ -66,12 +61,13 @@ button {
   width: 100%;
 }
 
-button:hover { background: #2e7d32; }
+button:hover {
+  background: #2e7d32;
+}
 
 #score {
   font-size: 22px;
   color: #1b5e20;
-  margin: 10px;
 }
 
 .bar-container {
@@ -89,7 +85,7 @@ button:hover { background: #2e7d32; }
 }
 
 #chatBox {
-  height: 180px;
+  height: 160px;
   overflow-y: auto;
   background: #f1f8e9;
   padding: 10px;
@@ -103,6 +99,13 @@ button:hover { background: #2e7d32; }
   border-bottom: 1px solid #ddd;
 }
 
+img {
+  margin-top: 5px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 150px;
+}
+
 @media (max-width: 600px) {
   .card { width: 95%; }
 }
@@ -114,13 +117,11 @@ button:hover { background: #2e7d32; }
 <!-- LOGIN -->
 <div id="loginScreen">
   <h1>🌍 Eco AI Tracker</h1>
-  <p>Enter your name</p>
-  <input id="username" placeholder="Your name">
+  <input id="username" placeholder="Enter name">
   <button onclick="startApp()">Start 🌱</button>
 </div>
 
-<h1>🌍 Eco AI Earth Tracker</h1>
-
+<h1>🌍 Eco AI Tracker</h1>
 <div id="score">Score: 0</div>
 
 <!-- ACTIONS -->
@@ -128,17 +129,20 @@ button:hover { background: #2e7d32; }
 
   <div class="card">
     <h3>♻️ Recycle Plastic</h3>
-    <button onclick="addPoints(10)">Do Action</button>
+    <input type="file" accept="image/*" onchange="uploadImage(event,'Recycle')">
+    <button onclick="addPoints(10,'Recycle')">Do Action</button>
   </div>
 
   <div class="card">
     <h3>💧 Save Water</h3>
-    <button onclick="addPoints(5)">Do Action</button>
+    <input type="file" accept="image/*" onchange="uploadImage(event,'Water')">
+    <button onclick="addPoints(5,'Water')">Do Action</button>
   </div>
 
   <div class="card">
-    <h3>🌳 Plant a Tree</h3>
-    <button onclick="addPoints(20)">Do Action</button>
+    <h3>🌳 Plant Tree</h3>
+    <input type="file" accept="image/*" onchange="uploadImage(event,'Tree')">
+    <button onclick="addPoints(20,'Tree')">Do Action</button>
   </div>
 
 </div>
@@ -153,11 +157,16 @@ button:hover { background: #2e7d32; }
 </div>
 
 <div class="card">
-  <h3>🏆 Badge</h3>
-  <div id="badge">No badge</div>
+  <h3>📸 Activity Feed</h3>
+  <div id="feed"></div>
 </div>
 
-<!-- CHATBOT -->
+<div class="card">
+  <h3>🏆 Leaderboard</h3>
+  <div id="leaderboard"></div>
+</div>
+
+<!-- CHAT -->
 <div class="card">
   <h3>🤖 Earth AI</h3>
   <div id="chatBox"></div>
@@ -165,29 +174,24 @@ button:hover { background: #2e7d32; }
   <button onclick="sendMsg()">Send</button>
 </div>
 
-<!-- LEADERBOARD -->
-<div class="card">
-  <h3>🏆 Leaderboard</h3>
-  <div id="leaderboard"></div>
-</div>
-
-<button onclick="resetGame()" style="background:#d32f2f;">Reset</button>
-
 <!-- SOUND -->
 <audio id="sound">
   <source src="https://www.soundjay.com/buttons/sounds/button-3.mp3">
 </audio>
 
 <script>
+
 let score = localStorage.getItem("ecoScore")
   ? parseInt(localStorage.getItem("ecoScore"))
   : 0;
 
 let user = "";
 let players = JSON.parse(localStorage.getItem("ecoPlayers")) || [];
+let images = JSON.parse(localStorage.getItem("ecoImages")) || {};
 
 updateUI();
 updateLeaderboard();
+updateFeed();
 
 /* LOGIN */
 function startApp() {
@@ -195,8 +199,22 @@ function startApp() {
   document.getElementById("loginScreen").style.display = "none";
 }
 
+/* IMAGE UPLOAD */
+function uploadImage(event, type) {
+  let file = event.target.files[0];
+  let reader = new FileReader();
+
+  reader.onload = function(e) {
+    images[type] = e.target.result;
+    localStorage.setItem("ecoImages", JSON.stringify(images));
+    updateFeed();
+  };
+
+  reader.readAsDataURL(file);
+}
+
 /* GAME */
-function addPoints(val) {
+function addPoints(val, type) {
   score += val;
   localStorage.setItem("ecoScore", score);
 
@@ -204,9 +222,10 @@ function addPoints(val) {
   updateUI();
 
   if (score % 20 === 0) celebrate();
-  if (score % 5 === 0) saveScore();
+  if (user) saveScore();
 }
 
+/* UI */
 function updateUI() {
   document.getElementById("score").innerText = "Score: " + score;
 
@@ -214,31 +233,28 @@ function updateUI() {
   document.getElementById("bar").style.width = percent + "%";
 
   let text = "Earth is weak 💔";
-  let badge = "No badge";
-
-  if (score >= 30) { text = "Earth recovering 🌱"; badge = "Beginner"; }
-  if (score >= 60) { text = "Earth healthy 🌿"; badge = "Eco Hero"; }
-  if (score >= 100) { text = "Earth thriving 🌍"; badge = "Guardian"; }
+  if (score >= 30) text = "Earth recovering 🌱";
+  if (score >= 60) text = "Earth healthy 🌿";
+  if (score >= 100) text = "Earth thriving 🌍";
 
   document.getElementById("healthText").innerText = text;
-  document.getElementById("badge").innerText = badge;
 }
 
-/* EFFECTS */
-function celebrate() {
-  confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-}
+/* FEED */
+function updateFeed() {
+  let feed = document.getElementById("feed");
+  feed.innerHTML = "";
 
-function playSound() {
-  let s = document.getElementById("sound");
-  s.currentTime = 0;
-  s.play();
+  for (let key in images) {
+    feed.innerHTML += `
+      <p><b>${key}</b></p>
+      <img src="${images[key]}">
+    `;
+  }
 }
 
 /* LEADERBOARD */
 function saveScore() {
-  if (!user) return;
-
   players.push({ name: user, score: score });
   players.sort((a,b)=>b.score-a.score);
   players = players.slice(0,10);
@@ -269,27 +285,31 @@ function sendMsg() {
   },500);
 }
 
-function addChat(sender,text){
+function addChat(s,t){
   let box = document.getElementById("chatBox");
-  box.innerHTML += `<p><b>${sender}:</b> ${text}</p>`;
+  box.innerHTML += `<p><b>${s}:</b> ${t}</p>`;
   box.scrollTop = box.scrollHeight;
 }
 
 function getReply(msg){
-  if(msg.includes("hello")) return "Hi 🌍!";
-  if(msg.includes("plastic")) return "Use reusable ♻️";
+  if(msg.includes("plastic")) return "Use reusable items ♻️";
   if(msg.includes("water")) return "Save water 💧";
   if(msg.includes("tree")) return "Plant trees 🌳";
   if(score>=100) return "Planet Guardian 🏆";
-  return "Help Earth 🌍♻️";
+  return "Help Earth 🌍";
 }
 
-/* RESET */
-function resetGame(){
-  score = 0;
-  localStorage.removeItem("ecoScore");
-  updateUI();
+/* EFFECTS */
+function celebrate(){
+  confetti({particleCount:120,spread:70,origin:{y:0.6}});
 }
+
+function playSound(){
+  let s=document.getElementById("sound");
+  s.currentTime=0;
+  s.play();
+}
+
 </script>
 
 </body>
