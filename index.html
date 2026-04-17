@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eco AI Earth Tracker 🌍🤖</title>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+body {
+  font-family: Arial;
+  margin: 0;
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  text-align: center;
+}
+
+#loginScreen {
+  position: fixed;
+  inset: 0;
+  background: #e8f5e9;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin: 10px;
+  width: 80%;
+  max-width: 250px;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 10px;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  margin: 10px;
+  width: 90%;
+  max-width: 320px;
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  transition: 0.3s;
+}
+
+.card:hover { transform: scale(1.03); }
+
+button {
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  background: #43a047;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button:hover { background: #2e7d32; }
+
+#score {
+  font-size: 22px;
+  color: #1b5e20;
+  margin: 10px;
+}
+
+.bar-container {
+  background: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 20px;
+}
+
+#bar {
+  height: 20px;
+  width: 0%;
+  background: #2e7d32;
+  transition: 0.5s;
+}
+
+#chatBox {
+  height: 180px;
+  overflow-y: auto;
+  background: #f1f8e9;
+  padding: 10px;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.player {
+  text-align: left;
+  padding: 5px;
+  border-bottom: 1px solid #ddd;
+}
+
+@media (max-width: 600px) {
+  .card { width: 95%; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <h1>🌍 Eco AI Tracker</h1>
+  <p>Enter your name</p>
+  <input id="username" placeholder="Your name">
+  <button onclick="startApp()">Start 🌱</button>
+</div>
+
+<h1>🌍 Eco AI Earth Tracker</h1>
+
+<div id="score">Score: 0</div>
+
+<!-- ACTIONS -->
+<div class="container">
+
+  <div class="card">
+    <h3>♻️ Recycle Plastic</h3>
+    <button onclick="addPoints(10)">Do Action</button>
+  </div>
+
+  <div class="card">
+    <h3>💧 Save Water</h3>
+    <button onclick="addPoints(5)">Do Action</button>
+  </div>
+
+  <div class="card">
+    <h3>🌳 Plant a Tree</h3>
+    <button onclick="addPoints(20)">Do Action</button>
+  </div>
+
+</div>
+
+<!-- PLANET -->
+<div class="card">
+  <h3>🌍 Planet Health</h3>
+  <div class="bar-container">
+    <div id="bar"></div>
+  </div>
+  <p id="healthText">Earth is weak 💔</p>
+</div>
+
+<div class="card">
+  <h3>🏆 Badge</h3>
+  <div id="badge">No badge</div>
+</div>
+
+<!-- CHATBOT -->
+<div class="card">
+  <h3>🤖 Earth AI</h3>
+  <div id="chatBox"></div>
+  <input id="chatInput" placeholder="Ask Earth AI...">
+  <button onclick="sendMsg()">Send</button>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="card">
+  <h3>🏆 Leaderboard</h3>
+  <div id="leaderboard"></div>
+</div>
+
+<button onclick="resetGame()" style="background:#d32f2f;">Reset</button>
+
+<!-- SOUND -->
+<audio id="sound">
+  <source src="https://www.soundjay.com/buttons/sounds/button-3.mp3">
+</audio>
+
+<script>
+let score = localStorage.getItem("ecoScore")
+  ? parseInt(localStorage.getItem("ecoScore"))
+  : 0;
+
+let user = "";
+let players = JSON.parse(localStorage.getItem("ecoPlayers")) || [];
+
+updateUI();
+updateLeaderboard();
+
+/* LOGIN */
+function startApp() {
+  user = document.getElementById("username").value || "Player";
+  document.getElementById("loginScreen").style.display = "none";
+}
+
+/* GAME */
+function addPoints(val) {
+  score += val;
+  localStorage.setItem("ecoScore", score);
+
+  playSound();
+  updateUI();
+
+  if (score % 20 === 0) celebrate();
+  if (score % 5 === 0) saveScore();
+}
+
+function updateUI() {
+  document.getElementById("score").innerText = "Score: " + score;
+
+  let percent = Math.min(score, 100);
+  document.getElementById("bar").style.width = percent + "%";
+
+  let text = "Earth is weak 💔";
+  let badge = "No badge";
+
+  if (score >= 30) { text = "Earth recovering 🌱"; badge = "Beginner"; }
+  if (score >= 60) { text = "Earth healthy 🌿"; badge = "Eco Hero"; }
+  if (score >= 100) { text = "Earth thriving 🌍"; badge = "Guardian"; }
+
+  document.getElementById("healthText").innerText = text;
+  document.getElementById("badge").innerText = badge;
+}
+
+/* EFFECTS */
+function celebrate() {
+  confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+}
+
+function playSound() {
+  let s = document.getElementById("sound");
+  s.currentTime = 0;
+  s.play();
+}
+
+/* LEADERBOARD */
+function saveScore() {
+  if (!user) return;
+
+  players.push({ name: user, score: score });
+  players.sort((a,b)=>b.score-a.score);
+  players = players.slice(0,10);
+
+  localStorage.setItem("ecoPlayers", JSON.stringify(players));
+  updateLeaderboard();
+}
+
+function updateLeaderboard() {
+  let board = document.getElementById("leaderboard");
+  board.innerHTML = "";
+
+  players.forEach((p,i)=>{
+    board.innerHTML += `<div class="player">${i+1}. ${p.name} - ${p.score}</div>`;
+  });
+}
+
+/* CHATBOT */
+function sendMsg() {
+  let input = document.getElementById("chatInput");
+  let msg = input.value.toLowerCase();
+  input.value = "";
+
+  addChat("You", msg);
+
+  setTimeout(()=>{
+    addChat("Earth AI 🤖", getReply(msg));
+  },500);
+}
+
+function addChat(sender,text){
+  let box = document.getElementById("chatBox");
+  box.innerHTML += `<p><b>${sender}:</b> ${text}</p>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+function getReply(msg){
+  if(msg.includes("hello")) return "Hi 🌍!";
+  if(msg.includes("plastic")) return "Use reusable ♻️";
+  if(msg.includes("water")) return "Save water 💧";
+  if(msg.includes("tree")) return "Plant trees 🌳";
+  if(score>=100) return "Planet Guardian 🏆";
+  return "Help Earth 🌍♻️";
+}
+
+/* RESET */
+function resetGame(){
+  score = 0;
+  localStorage.removeItem("ecoScore");
+  updateUI();
+}
+</script>
+
+</body>
+</html>
